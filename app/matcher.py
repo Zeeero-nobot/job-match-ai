@@ -1,33 +1,87 @@
-SKILLS = {
-    "python",
-    "fastapi",
-    "django",
-    "flask",
-    "git",
-    "github",
-    "docker",
-    "linux",
-    "sql",
-    "postgresql",
-    "mysql",
-    "numpy",
-    "pandas",
-    "pytorch",
-    "tensorflow",
-    "scikit-learn",
-    "machine learning",
-    "deep learning",
+import re
+
+
+SKILL_ALIASES = {
+    "python": ["python"],
+    "fastapi": ["fastapi"],
+    "django": ["django"],
+    "flask": ["flask"],
+
+    "git": ["git"],
+    "github": ["github"],
+
+    "docker": ["docker"],
+    "linux": ["linux"],
+
+    "sql": ["sql"],
+    "postgresql": ["postgresql", "postgres"],
+    "mysql": ["mysql"],
+
+    "numpy": ["numpy"],
+    "pandas": ["pandas"],
+
+    "pytorch": ["pytorch", "torch"],
+    "tensorflow": ["tensorflow"],
+
+    "scikit-learn": [
+        "scikit-learn",
+        "sklearn",
+        "scikit learn",
+    ],
+
+    "machine learning": [
+        "machine learning",
+        "ml",
+    ],
+
+    "deep learning": [
+        "deep learning",
+        "dl",
+    ],
 }
 
 
-def extract_skills(text: str) -> set[str]:
+def normalize_text(text: str) -> str:
     text = text.lower()
 
-    found_skills = {
-        skill
-        for skill in SKILLS
-        if skill in text
-    }
+    text = re.sub(
+        r"[^a-z0-9+#.\-\s]",
+        " ",
+        text,
+    )
+
+    text = re.sub(
+        r"\s+",
+        " ",
+        text,
+    )
+
+    return text.strip()
+
+
+def contains_skill(
+    text: str,
+    alias: str,
+) -> bool:
+    pattern = rf"\b{re.escape(alias)}\b"
+
+    return re.search(
+        pattern,
+        text,
+        flags=re.IGNORECASE,
+    ) is not None
+
+
+def extract_skills(text: str) -> set[str]:
+    text = normalize_text(text)
+
+    found_skills = set()
+
+    for skill, aliases in SKILL_ALIASES.items():
+        for alias in aliases:
+            if contains_skill(text, alias):
+                found_skills.add(skill)
+                break
 
     return found_skills
 
