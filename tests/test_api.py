@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -15,12 +17,18 @@ def test_health():
     }
 
 
-def test_analyze():
+@patch(
+    "app.matcher.calculate_semantic_similarity",
+    return_value=80,
+)
+def test_analyze(mock_similarity):
     response = client.post(
         "/analyze",
         json={
             "resume_text": "Python Git SQL",
-            "job_description": "Python Git SQL Docker FastAPI",
+            "job_description": (
+                "Python Git SQL Docker FastAPI"
+            ),
         },
     )
 
@@ -28,12 +36,19 @@ def test_analyze():
 
     data = response.json()
 
-    assert data["match_score"] == 60
+    assert data["skill_match_score"] == 60
+    assert data["semantic_similarity"] == 80
+    assert data["overall_score"] == 66
+
     assert "python" in data["matched_skills"]
     assert "docker" in data["missing_skills"]
 
 
-def test_skill_aliases():
+@patch(
+    "app.matcher.calculate_semantic_similarity",
+    return_value=90,
+)
+def test_skill_aliases(mock_similarity):
     response = client.post(
         "/analyze",
         json={
@@ -52,7 +67,22 @@ def test_skill_aliases():
 
     data = response.json()
 
-    assert data["match_score"] == 100
+    assert data["skill_match_score"] == 100
+    assert data["semantic_similarity"] == 90
+    assert data["overall_score"] == 97
+
     assert "postgresql" in data["matched_skills"]
     assert "scikit-learn" in data["matched_skills"]
     assert "machine learning" in data["matched_skills"]
+
+
+def test_empty_resume_is_rejected():
+    response = client.post(
+        "/analyze",
+        json={
+            "resume_text": "",
+            "job_description": "Python developer",
+        },
+    )
+
+    assert response.status_code == 422

@@ -1,5 +1,7 @@
 import re
 
+from app.semantic import calculate_semantic_similarity
+
 
 SKILL_ALIASES = {
     "python": ["python"],
@@ -25,8 +27,8 @@ SKILL_ALIASES = {
 
     "scikit-learn": [
         "scikit-learn",
-        "sklearn",
         "scikit learn",
+        "sklearn",
     ],
 
     "machine learning": [
@@ -86,6 +88,22 @@ def extract_skills(text: str) -> set[str]:
     return found_skills
 
 
+def calculate_skill_match(
+    resume_skills: set[str],
+    job_skills: set[str],
+) -> int:
+    if not job_skills:
+        return 0
+
+    matched_skills = resume_skills & job_skills
+
+    return round(
+        len(matched_skills)
+        / len(job_skills)
+        * 100
+    )
+
+
 def calculate_match(
     resume_text: str,
     job_description: str,
@@ -96,17 +114,25 @@ def calculate_match(
     matched_skills = resume_skills & job_skills
     missing_skills = job_skills - resume_skills
 
-    if not job_skills:
-        score = 0
-    else:
-        score = round(
-            len(matched_skills)
-            / len(job_skills)
-            * 100
-        )
+    skill_match_score = calculate_skill_match(
+        resume_skills,
+        job_skills,
+    )
+
+    semantic_similarity = calculate_semantic_similarity(
+        resume_text,
+        job_description,
+    )
+
+    overall_score = round(
+        skill_match_score * 0.7
+        + semantic_similarity * 0.3
+    )
 
     return {
-        "match_score": score,
+        "skill_match_score": skill_match_score,
+        "semantic_similarity": semantic_similarity,
+        "overall_score": overall_score,
         "matched_skills": sorted(matched_skills),
         "missing_skills": sorted(missing_skills),
     }
